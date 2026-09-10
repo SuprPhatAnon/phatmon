@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "homes": [
+    {
+      "name": "personal",
+      "path": "~/.codex",
+      "endpoint": "ws://127.0.0.1:4501"
+    },
+    {
+      "name": "consumable",
+      "path": "~/.codex-homes/consumable",
+      "endpoint": "ws://127.0.0.1:4500"
+    }
+  ],
+  "settings": {
+    "homes_directory": "~/.codex-homes",
+    "codex_binary": "codex",
+    "refresh_interval_seconds": 5,
+    "quota_refresh_interval_seconds": 60,
+    "live_only": false
+  }
+}
