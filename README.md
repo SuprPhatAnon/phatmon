@@ -53,13 +53,16 @@ connected to its server:
 
 ```sh
 source "$HOME/.codex/phatmon.env"
-codex --remote "$CODEX_REMOTE"
+codex --remote "$CODEX_REMOTE" --cd "$PWD"
 ```
 
 `CODEX_REMOTE` carries the address for your client setup to consume. Phatmon does
 not install a Codex launcher or automatically convert the variable to client
 arguments. Its own connections use the saved home endpoints. In the dashboard,
 open the session with **Enter** and press **a** to attach.
+
+For a one-time shell shortcut that lets you just run `codex` from any project,
+see [the Zsh shortcut](docs/live-sessions.md#one-time-shortcut-for-zsh).
 
 See [Live sessions and direnv](docs/live-sessions.md) for personal `.zshrc`
 defaults, work `.envrc` overrides, and manual servers without systemd.

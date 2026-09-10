@@ -38,12 +38,33 @@ Phatmon reads its endpoint mappings from its config or `--connect`, not from
 Use the explicit client command unless your own tooling already supplies the flag:
 
 ```sh
-codex --remote "$CODEX_REMOTE"
+codex --remote "$CODEX_REMOTE" --cd "$PWD"
 ```
+
+`--cd "$PWD"` explicitly selects your shell's current project directory. The
+shared server runs separately; installed services start in your home directory.
 
 Setting or displaying `CODEX_REMOTE` alone does not prove that a client has attached
 to that server. See the [Codex app-server documentation](https://learn.chatgpt.com/docs/app-server)
 for the supported `--remote` connection.
+
+## One-time shortcut for Zsh
+
+Copy the function from [codex.zsh](examples/codex.zsh) into `~/.zshrc` after your
+Codex environment defaults, then open a new terminal. From then on, run:
+
+```sh
+cd /path/to/project
+codex
+```
+
+The function reads the current directory and `CODEX_REMOTE` each time you run it,
+so the work overrides from direnv apply automatically. It also supports
+`codex resume` and `codex fork`, and respects explicit `--remote` and `--cd`
+arguments. Administrative and noninteractive commands such as `codex login` and
+`codex exec` pass through directly when the subcommand is the first argument.
+Use `command codex ...` whenever you want to bypass the shortcut entirely.
+The installer does not edit your shell configuration; add this function once.
 
 ## Personal defaults in Zsh
 
@@ -65,7 +86,7 @@ Use one approach. Open a new shell after editing startup configuration. Run Code
 from the project directory in which you want it to work:
 
 ```sh
-codex --remote "$CODEX_REMOTE"
+codex --remote "$CODEX_REMOTE" --cd "$PWD"
 ```
 
 See [personal.zsh](examples/personal.zsh) for the direct-export snippet.
@@ -93,7 +114,7 @@ After reviewing an edited `.envrc`, allow it and enter the project:
 direnv allow "$HOME/consumable"
 cd "$HOME/consumable"
 printf 'Home: %s\nServer: %s\n' "$CODEX_HOME" "$CODEX_REMOTE"
-codex --remote "$CODEX_REMOTE"
+codex --remote "$CODEX_REMOTE" --cd "$PWD"
 ```
 
 Your shell must already have the direnv hook configured. Direnv applies the work

@@ -26,7 +26,7 @@ connection alone does not prove that the specific session is loaded on that serv
 ## CODEX_REMOTE is set but the client is not live
 
 Phatmon exports the variable for your client setup to consume; it does not install
-a launcher that consumes it. Use `codex --remote "$CODEX_REMOTE"` explicitly. The
+a launcher that consumes it. Use `codex --remote "$CODEX_REMOTE" --cd "$PWD"` explicitly. The
 dashboard separately uses endpoints stored in its config. See
 [Live sessions and direnv](live-sessions.md).
 
@@ -34,6 +34,17 @@ If direnv reports that `.envrc` is blocked, review the changes and run
 `direnv allow /path/to/project`. A changed environment file does not move an
 already-running client to another server. Restart or resume the client through
 the desired endpoint.
+
+## Codex starts in the wrong directory
+
+Pass your current directory explicitly when opening a session on the shared server:
+
+```sh
+codex --remote "$CODEX_REMOTE" --cd "$PWD"
+```
+
+The installed app-server service starts in your home directory. `--cd "$PWD"`
+selects the project directory from the shell where you invoke the client.
 
 ## Connection refused or a home remains disconnected
 
