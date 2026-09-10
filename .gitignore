@@ -1,0 +1,50 @@
+# Build output and Go test binaries
+/bin/
+/dist/
+/phatmon
+/phatmon.exe
+*.test
+*.test.exe
+
+# Coverage, profiles, and local logs
+/coverage/
+/coverage*.out
+*.prof
+/*.log
+
+# Project-local Go dependencies, tools, and caches
+/.venv/
+
+# Machine-specific Go workspace files
+/go.work
+/go.work.sum
+
+# Local Phatmon state and configuration overrides
+/.phatmon/
+/config.json
+/homes.json
+/*.local.json
+
+# Local Codex homes and runtime data (retain shareable project instructions)
+/.codex-homes/
+/.codex/auth.json
+/.codex/sessions/
+/.codex/archived_sessions/
+/.codex/history.jsonl
+/.codex/state*.sqlite*
+/.codex/logs*.sqlite*
+/.codex/log/
+/.codex/tmp/
+
+# Environment files; allow sanitized templates
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Editor and operating-system artifacts
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
