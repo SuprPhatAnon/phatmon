@@ -100,6 +100,9 @@ func (m *Model) View() string {
 	} else {
 		content = m.detailView()
 		help = "1–7/tab views  ↑↓/PgUp/PgDn scroll  a attach  m message  i interrupt  esc dashboard"
+		if m.tab == 1 {
+			help = "Tab pane  ↑↓ select/scroll  PgUp/Dn scroll  f live  s swap  1–7 views  Esc back"
+		}
 		if m.tab == 4 {
 			help = "↑↓ select skill  enter view file  t enable/disable  tab next view  esc dashboard"
 		}
@@ -294,7 +297,7 @@ func (m *Model) detailHeader() string {
 	return "\n " + bold.Render(one(m.thread.Title())) + "\n " + accent.Render(one(r.Home)) + " · " + status + " · " + attached + "\n " + muted.Render(one(m.thread.Cwd))
 }
 func (m *Model) detailView() string {
-	labels := []string{"Overview", "Conversation", "Plan", "Git", "Skills", "MCP", "Requests"}
+	labels := []string{"Overview", "Responses", "Plan", "Git", "Skills", "MCP", "Requests"}
 	tabs := []string{}
 	for i, label := range labels {
 		title := fmt.Sprintf("%d %s", i+1, label)
@@ -305,10 +308,18 @@ func (m *Model) detailView() string {
 		}
 		tabs = append(tabs, title)
 	}
-	return m.detailHeader() + "\n\n " + strings.Join(tabs, "  ") + "\n\n" + m.viewport.View()
+	body := m.viewport.View()
+	if m.tab == 1 {
+		body = m.responsesView()
+	}
+	return m.detailHeader() + "\n\n " + strings.Join(tabs, "  ") + "\n\n" + body
 }
 func (m *Model) updateViewport() {
 	if m.selected == nil {
+		return
+	}
+	m.updateResponses()
+	if m.tab == 1 {
 		return
 	}
 	r := m.selected
@@ -359,38 +370,6 @@ func (m *Model) updateViewport() {
 			text += "\nConnection error: " + h.Error
 		}
 		text += "\n\nQUOTA\n" + quotaDetail(h)
-	case 1:
-		if m.older {
-			text = "Showing latest 20 turns; older history remains in Codex.\n\n"
-		}
-		for _, turn := range m.thread.Turns {
-			text += "── TURN " + turn.ID + " · " + turn.Status + " ──\n"
-			if len(turn.Error) > 0 && string(turn.Error) != "null" {
-				text += pretty(turn.Error) + "\n"
-			}
-			for _, item := range turn.Items {
-				body := item.Body()
-				if body == "" {
-					continue
-				}
-				if len(body) > 16<<10 {
-					body = body[:16<<10] + "\n[display truncated]"
-				}
-				text += "\n" + strings.ToUpper(item.Type) + "\n" + body + "\n"
-			}
-			text += "\n"
-		}
-		keys := []string{}
-		for key := range m.stream {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			text += "\nLIVE\n" + m.stream[key] + "\n"
-		}
-		if text == "" {
-			text = "No conversation items yet. Attach and press m to send a message."
-		}
 	case 2:
 		plan, ok := h.Plans[r.Thread.ID]
 		if !ok {

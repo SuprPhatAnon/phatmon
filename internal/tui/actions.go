@@ -17,6 +17,9 @@ import (
 )
 
 func (m *Model) key(key tea.KeyMsg) tea.Cmd {
+	if m.selected != nil && m.tab == 1 && m.responseKey(key) {
+		return nil
+	}
 	if key.String() == "tab" || key.String() == "shift+tab" || key.String() == "left" || key.String() == "right" || key.String() == "esc" || key.String() == "r" || len(key.String()) == 1 {
 		m.skillContent = ""
 	}
@@ -32,7 +35,7 @@ func (m *Model) key(key tea.KeyMsg) tea.Cmd {
 		if m.selected != nil {
 			m.selected = nil
 			m.skills = nil
-			m.stream = map[string]string{}
+			m.resetResponses()
 			m.notice = ""
 		} else {
 			m.filter = ""
@@ -110,10 +113,10 @@ func (m *Model) key(key tea.KeyMsg) tea.Cmd {
 			r := m.rows[m.cursor]
 			m.selected = &r
 			m.thread = r.Thread
-			m.tab = 0
+			m.tab = 1
 			m.inventoryCursor = 0
 			m.composer.Reset()
-			m.stream = map[string]string{}
+			m.resetResponses()
 			m.viewport.GotoTop()
 			m.updateViewport()
 			return m.readDetail()

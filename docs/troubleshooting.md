@@ -20,7 +20,8 @@ history through the shared server:
 codex resume --remote "$CODEX_REMOTE" SESSION_ID
 ```
 
-In Phatmon, refresh with `r`, open the session, then press `a` to attach. A TCP
+In Phatmon, refresh with `r` and open the session; loaded sessions attach automatically.
+For stored history, press `a` to resume. A TCP
 connection alone does not prove that the specific session is loaded on that server.
 
 ## CODEX_REMOTE is set but the client is not live

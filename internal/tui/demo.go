@@ -30,7 +30,10 @@ func (m *Model) seedDemo() {
 	}
 	for i, e := range examples {
 		t := codex.Thread{ID: e.id, Name: e.title, Preview: e.title, Cwd: e.cwd, Model: e.model, ModelProvider: "openai", ReasoningEffort: "high", Status: codex.Status{Type: e.status, ActiveFlags: e.flags}, UpdatedAt: now - int64(i*300), CreatedAt: now - 3600}
-		t.Turns = []codex.Turn{{ID: "turn-" + e.id, Status: "inProgress", Items: []codex.Item{{ID: "user", Type: "userMessage", Content: json.RawMessage(`[{"type":"text","text":"Please work on this task and report progress."}]`)}, {ID: "agent", Type: "agentMessage", Text: "I have identified the relevant code and am checking the implementation against the existing tests."}}}}
+		t.Turns = []codex.Turn{{ID: "turn-" + e.id, Status: "inProgress", Items: []codex.Item{{ID: "user", Type: "userMessage", Content: json.RawMessage(`[{"type":"text","text":"Please work on this task and report progress."}]`)}, {ID: "agent", Type: "agentMessage", Text: "I have identified the relevant code and am checking the implementation against the existing tests."},
+			{ID: "inspect", Type: "commandExecution", Command: "git status --short", AggregatedOutput: " M internal/session.go\n M internal/events.go", Status: "completed"},
+			{ID: "agent-test", Type: "agentMessage", Text: "The implementation is ready. I’m running the tests and checking the live event handling."},
+			{ID: "test", Type: "commandExecution", Command: "go test ./...", AggregatedOutput: "ok   phatmon/internal/session\nok   phatmon/internal/events\nChecking streamed output…", Status: "inProgress"}}}}
 		if e.status != "active" {
 			t.Turns[0].Status = "completed"
 		}

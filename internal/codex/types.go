@@ -104,6 +104,14 @@ type Item struct {
 	Server           string          `json:"server"`
 	Tool             string          `json:"tool"`
 	Changes          json.RawMessage `json:"changes"`
+	Name             string          `json:"name"`
+	Namespace        string          `json:"namespace"`
+	Output           json.RawMessage `json:"output"`
+	Result           json.RawMessage `json:"result"`
+	Error            json.RawMessage `json:"error"`
+	ContentItems     json.RawMessage `json:"contentItems"`
+	Query            string          `json:"query"`
+	Path             string          `json:"path"`
 }
 
 func (i Item) Body() string {
@@ -125,10 +133,38 @@ func (i Item) Body() string {
 	case "fileChange":
 		return string(i.Changes)
 	case "mcpToolCall":
-		return i.Server + " / " + i.Tool + " · " + i.Status
+		return i.Server + " / " + i.Tool + " · " + i.Status + "\n" + outputText(i.Result) + outputText(i.Error)
+	case "functionCallOutput":
+		return i.Namespace + "/" + i.Name + "\n" + outputText(i.Output)
+	case "dynamicToolCall":
+		return i.Namespace + "/" + i.Tool + "\n" + outputText(i.ContentItems)
+	case "webSearch":
+		return i.Query
+	case "imageView":
+		return i.Path
+	case "collabAgentToolCall":
+		return i.Tool + " · " + i.Status
 	default:
 		return i.Text
 	}
+}
+
+// Preserve structured tool results as readable JSON and render plain string
+// outputs without JSON quoting. Terminal sanitization happens in the TUI.
+func outputText(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
+	}
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return text + "\n"
+	}
+	var value any
+	if json.Unmarshal(raw, &value) != nil {
+		return string(raw) + "\n"
+	}
+	pretty, _ := json.MarshalIndent(value, "", "  ")
+	return string(pretty) + "\n"
 }
 
 type TokenBreakdown struct {

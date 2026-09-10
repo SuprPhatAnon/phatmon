@@ -131,7 +131,8 @@ The installer saves all endpoint mappings. Start the dashboard in another termin
 ```
 
 1. Select the desired session and press **Enter**.
-2. Press **a** and confirm attachment to receive live events.
+2. Loaded sessions attach automatically and open the current response with live tool output.
+   For stored history, press **a** and confirm resuming it.
 3. Press **m** to compose; **Ctrl+S** sends. An idle session starts a turn; an active
    session receives steering input for its current turn.
 4. Press **i** to interrupt the attached turn when needed.

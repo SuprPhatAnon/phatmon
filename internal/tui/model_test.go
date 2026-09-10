@@ -39,12 +39,12 @@ func TestDashboardDrilldownAndFilters(t *testing.T) {
 	if m.selected == nil {
 		t.Fatal("enter did not drill down")
 	}
-	if !strings.Contains(m.View(), "Conversation") {
+	if !strings.Contains(m.View(), "Responses") {
 		t.Fatal("detail tabs missing")
 	}
 	press(m, "2")
-	if !strings.Contains(m.viewport.View(), "TURN") {
-		t.Fatal("conversation missing")
+	if !strings.Contains(m.responses.list.View(), "identified the relevant code") {
+		t.Fatal("responses missing")
 	}
 	press(m, "3")
 	if !strings.Contains(m.viewport.View(), "Implement the changes") {

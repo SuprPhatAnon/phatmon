@@ -36,7 +36,12 @@ These keys apply outside text-entry forms and the message composer.
 | Anywhere | `r` | Refresh; retry disconnected homes |
 | Anywhere | `n` | Create a session in the selected home and directory |
 | Details | `1`–`7` | Select a detail tab |
-| Details | Tab/Shift+Tab or Left/Right | Cycle tabs |
+| Details | Left/Right | Cycle tabs |
+| Responses | Tab/Shift+Tab or Enter | Switch pane focus |
+| Responses | Up/Down or `j`/`k` | Select a response, or scroll tool output in the focused pane |
+| Responses | PageUp/PageDown, Home/End | Scroll the focused pane |
+| Responses | `f`, `s` | Follow the current response; swap pane positions |
+| Other detail tabs | Tab/Shift+Tab | Cycle tabs |
 | Details | Up/Down, PageUp/PageDown, Home/End | Scroll or select entries |
 | Details | `a` | Attach to a loaded thread or resume stored history |
 | Details | `m` | Open the message composer |
@@ -53,15 +58,27 @@ These keys apply outside text-entry forms and the message composer.
 | Tab | Contents |
 | --- | --- |
 | 1 — Overview | Session identity, full directory, runtime, tokens, quota, and Git summary |
-| 2 — Conversation | Recent turns and live streamed output after attachment |
+| 2 — Responses (default) | Assistant responses and the tool output following the selected response, in two panes |
 | 3 — Plan | The plan reported by the agent and current step |
 | 4 — Git | Repository state for the session directory |
 | 5 — Skills | Skills Codex discovers for this session directory |
 | 6 — MCP | User-level MCP configuration for the selected home |
 | 7 — Requests | Pending command/file approvals and user-input questions |
 
-Opening details reads history; pressing **a** performs attachment/resume and enables
-live events. [Connect both clients to the same server](live-sessions.md) before
+Opening details selects the latest assistant response and automatically attaches to
+sessions already loaded on the connected server. The left pane lists only assistant
+responses; the right pane shows tool activity after the selected response up to the
+next assistant response, including across turn boundaries. User messages, reasoning,
+and plan items are omitted from this view.
+
+Live mode follows incoming responses and scrolls to the newest output. Selecting an
+older response or scrolling either pane pauses following, preserving your position
+while new events arrive. Press `f` to return to the current response and follow live
+output. Tab switches focus; `s` swaps the panes without changing their scroll positions.
+The focused pane has a highlighted border and a `›` in its heading.
+
+Stored sessions stay history-only until you press **a** and confirm resuming them.
+[Connect both clients to the same server](live-sessions.md) before
 controlling a session that is also open in a Codex terminal.
 
 ## Messaging and requests

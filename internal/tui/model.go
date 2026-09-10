@@ -63,10 +63,14 @@ type eventMsg struct {
 	Event  codex.Event
 }
 type detailMsg struct {
-	Key    string
-	Thread codex.Thread
-	Older  bool
-	Err    error
+	Key        string
+	Thread     codex.Thread
+	Older      bool
+	Err        error
+	Generation uint64
+	Client     *codex.Client
+	Attached   bool
+	AttachErr  error
 }
 type inventoryMsg struct {
 	Key                string
@@ -121,16 +125,23 @@ type Model struct {
 	usageCache       *metrics.UsageCache
 	notice           string
 	git              map[string]metrics.Git
-	stream           map[string]string
+	responses        responseView
+	detailGeneration uint64
+	detailPending    bool
+	detailItems      map[string]bool
+	detailUnseeded   map[string]bool
+	detailTurns      map[string]bool
+	detailStatus     bool
 }
 
 func New(homes []config.Home, registry string, settings config.Settings, demo bool) *Model {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &Model{ctx: ctx, cancel: cancel, homes: map[string]*homeState{}, registry: registry, binary: settings.CodexBinary, settings: settings, liveOnly: settings.LiveOnly, demo: demo, width: 120, height: 40, git: map[string]metrics.Git{}, stream: map[string]string{}, usageCache: metrics.NewUsageCache()}
+	m := &Model{ctx: ctx, cancel: cancel, homes: map[string]*homeState{}, registry: registry, binary: settings.CodexBinary, settings: settings, liveOnly: settings.LiveOnly, demo: demo, width: 120, height: 40, git: map[string]metrics.Git{}, usageCache: metrics.NewUsageCache()}
 	for _, h := range homes {
 		m.addHome(h)
 	}
 	m.viewport = viewport.New(116, 24)
+	m.resetResponses()
 	m.composer = textarea.New()
 	m.composer.Placeholder = "Message this session. Ctrl+S sends; Esc keeps the draft."
 	m.composer.SetHeight(6)
@@ -223,7 +234,33 @@ func (m *Model) readDetail() tea.Cmd {
 		return nil
 	}
 	c, ctx := h.Client, m.ctx
-	return func() tea.Msg { t, older, err := c.Detail(ctx, r.Thread.ID); return detailMsg{r.key(), t, older, err} }
+	m.detailGeneration++
+	generation := m.detailGeneration
+	m.detailPending = true
+	m.detailItems = map[string]bool{}
+	m.detailUnseeded = map[string]bool{}
+	m.detailTurns = map[string]bool{}
+	m.detailStatus = false
+	attached := h.Attached[r.Thread.ID]
+	return func() tea.Msg {
+		t, older, err := c.Detail(ctx, r.Thread.ID)
+		result := detailMsg{Key: r.key(), Thread: t, Older: older, Err: err, Generation: generation, Client: c}
+		// Subscribe only to a thread already loaded on this server. Stored history
+		// still requires an explicit resume because its independent runtime is unknown.
+		if err == nil && !attached && (t.Status.Type == "active" || t.Status.Type == "idle" || t.Status.Type == "systemError") {
+			live, resumeErr := c.Resume(ctx, r.Thread.ID)
+			result.AttachErr = resumeErr
+			result.Attached = resumeErr == nil
+			if resumeErr == nil {
+				result.Thread = live
+				if len(live.Turns) > 20 {
+					result.Thread.Turns = live.Turns[len(live.Turns)-20:]
+					result.Older = true
+				}
+			}
+		}
+		return result
+	}
 }
 func (m *Model) inventory() tea.Cmd {
 	if m.selected == nil || m.demo {
@@ -301,6 +338,10 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		h.Client = msg.Client
+		if m.selected != nil && m.selected.Home == msg.Name {
+			m.detailGeneration++
+			m.detailPending = false
+		}
 		h.Refreshing = false
 		h.QuotaLoading = false
 		h.Error = ""
@@ -332,6 +373,13 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.rebuildRows()
 		m.updateViewport()
+		if m.selected != nil && m.selected.Home == msg.Name && !m.detailPending && !h.Attached[m.selected.Thread.ID] && !m.demo {
+			for _, thread := range h.Threads {
+				if thread.ID == m.selected.Thread.ID && (thread.Status.Type == "active" || thread.Status.Type == "idle") {
+					return m, m.readDetail()
+				}
+			}
+		}
 	case quotaMsg:
 		h, ok := m.homes[msg.Name]
 		if !ok || h.Client != msg.Client {
@@ -358,18 +406,26 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, waitEvent(m.ctx, msg.Name, msg.Client)
 		}
 	case detailMsg:
-		if m.selected == nil || m.selected.key() != msg.Key {
+		if m.selected == nil || m.selected.key() != msg.Key || msg.Generation != m.detailGeneration || (msg.Client != nil && msg.Client != m.homes[m.selected.Home].Client) {
 			return m, nil
 		}
+		m.detailPending = false
 		if msg.Err != nil {
 			m.notice = msg.Err.Error()
 			return m, nil
 		}
-		m.thread = msg.Thread
+		m.thread = m.mergeDetail(msg.Thread)
 		m.older = msg.Older
-		m.selected.Thread = msg.Thread
+		m.selected.Thread = m.thread
 		h := m.homes[m.selected.Home]
-		for _, t := range msg.Thread.Turns {
+		if msg.Attached {
+			h.Attached[msg.Thread.ID] = true
+		}
+		if msg.AttachErr != nil {
+			m.notice = "History loaded; live attachment failed: " + msg.AttachErr.Error()
+		}
+		delete(h.Active, msg.Thread.ID)
+		for _, t := range m.thread.Turns {
 			if t.Status == "inProgress" {
 				h.Active[msg.Thread.ID] = t.ID
 			}
@@ -432,7 +488,8 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					r := row{name, msg.Thread}
 					m.selected = &r
 					m.thread = msg.Thread
-					m.tab = 0
+					m.tab = 1
+					m.resetResponses()
 					m.updateViewport()
 				}
 				break
@@ -499,13 +556,10 @@ func (m *Model) applyEvent(name string, event codex.Event) {
 	var p struct {
 		ThreadID   string          `json:"threadId"`
 		TurnID     string          `json:"turnId"`
-		ItemID     string          `json:"itemId"`
-		Delta      string          `json:"delta"`
 		Status     codex.Status    `json:"status"`
 		TokenUsage codex.Usage     `json:"tokenUsage"`
 		Thread     codex.Thread    `json:"thread"`
 		Turn       codex.Turn      `json:"turn"`
-		Item       codex.Item      `json:"item"`
 		RequestID  json.RawMessage `json:"requestId"`
 		Message    string          `json:"message"`
 	}
@@ -570,45 +624,7 @@ func (m *Model) applyEvent(name string, event codex.Event) {
 		h.Requests = nil
 	}
 	if m.selected != nil && m.selected.key() == name+"/"+p.ThreadID {
-		if event.Method == "item/agentMessage/delta" || event.Method == "item/commandExecution/outputDelta" {
-			key := p.ItemID
-			m.stream[key] += p.Delta
-			if len(m.stream[key]) > 64<<10 {
-				m.stream[key] = m.stream[key][len(m.stream[key])-(64<<10):]
-			}
-		}
-		if event.Method == "turn/started" {
-			m.thread.Turns = append(m.thread.Turns, p.Turn)
-		}
-		if event.Method == "item/completed" {
-			delete(m.stream, p.Item.ID)
-			for i := range m.thread.Turns {
-				if m.thread.Turns[i].ID == p.TurnID {
-					items := m.thread.Turns[i].Items
-					found := false
-					for j := range items {
-						if items[j].ID == p.Item.ID {
-							items[j] = p.Item
-							found = true
-						}
-					}
-					if !found {
-						items = append(items, p.Item)
-					}
-					m.thread.Turns[i].Items = items
-				}
-			}
-		}
-		if event.Method == "turn/completed" {
-			for i := range m.thread.Turns {
-				if m.thread.Turns[i].ID == p.Turn.ID {
-					if len(p.Turn.Items) == 0 {
-						p.Turn.Items = m.thread.Turns[i].Items
-					}
-					m.thread.Turns[i] = p.Turn
-				}
-			}
-		}
+		m.applyDetailEvent(event)
 	}
 }
 
