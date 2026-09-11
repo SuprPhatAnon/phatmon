@@ -53,6 +53,19 @@ These keys apply outside text-entry forms and the message composer.
 | Dashboard/details | Esc | Return to dashboard, or clear dashboard search/live-only filter |
 | Dashboard/details | `q` | Quit; confirm if an owned server has active work |
 
+## Session information
+
+The upper-right corner of session details shows the selected home's remaining
+five-hour and weekly quota, the session model, context usage, directory, and Git
+branch/status. Context is a percentage used; wider terminals also show tokens used
+and the context-window size. Quota is a percentage remaining and is marked stale
+when its refresh fails. Missing values stay unavailable.
+
+At narrower widths, Git changes use `S` for staged, `M` for modified, `?` for
+untracked, and `!` for conflicts. Arrows show commits ahead/behind. Long directory
+paths keep the project name at the end. These four header rows stay visible while
+either pane scrolls.
+
 ## Session tabs
 
 | Tab | Contents |

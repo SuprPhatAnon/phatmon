@@ -294,8 +294,112 @@ func (m *Model) detailHeader() string {
 	if h.Attached[r.Thread.ID] {
 		attached = "attached"
 	}
-	return "\n " + bold.Render(one(m.thread.Title())) + "\n " + accent.Render(one(r.Home)) + " · " + status + " · " + attached + "\n " + muted.Render(one(m.thread.Cwd))
+	rightWidth := min(78, max(38, m.width*3/5))
+	leftWidth := max(1, m.width-rightWidth-3)
+	title := strings.Split(ansi.Wrap(one(m.thread.Title()), leftWidth, ""), "\n")
+	left := []string{"", "", one(r.Home) + " · " + attached, status}
+	for i := 0; i < min(2, len(title)); i++ {
+		left[i] = title[i]
+	}
+	if len(title) > 2 {
+		left[1] = ansi.Truncate(left[1], max(1, leftWidth-1), "") + "…"
+	}
+	right := m.detailInfo(rightWidth)
+	lines := make([]string, 4)
+	for i := range lines {
+		label := fit(left[i], leftWidth)
+		if i < 2 {
+			label = bold.Render(label)
+		} else {
+			label = accent.Render(label)
+		}
+		lines[i] = label + muted.Render(" │ ") + right[i]
+	}
+	return strings.Join(lines, "\n")
 }
+
+// Keep the header four rows tall so metrics do not take space from the panes.
+func (m *Model) detailInfo(width int) []string {
+	h := m.homes[m.selected.Home]
+	quota := "Quota left"
+	if h.QuotaError != "" || h.Error != "" {
+		quota += " (stale)"
+	}
+	windows := []string{}
+	for _, bucket := range h.Quotas.Buckets() {
+		for _, window := range bucket.DisplayWindows() {
+			windows = append(windows, fmt.Sprintf("%s %.0f%%", window.Label(), math.Max(0, math.Min(100, 100-window.UsedPercent))))
+		}
+	}
+	if len(windows) == 0 {
+		windows = append(windows, "unavailable")
+	}
+	quota += " · " + strings.Join(windows, " · ")
+	// On small terminals shorten the stale label to keep both quota windows visible.
+	if ansi.StringWidth(quota) > width {
+		quota = strings.Replace(quota, "Quota left (stale)", "Stale quota", 1)
+	}
+	context := "Ctx —"
+	usage := h.Usage[m.selected.Thread.ID]
+	if percent, ok := usage.ContextPercent(); ok {
+		context = fmt.Sprintf("Ctx %.0f%%", percent)
+		if width >= 60 {
+			context += fmt.Sprintf(" (%s/%s)", compact(usage.Last.TotalTokens), compact(*usage.ModelContextWindow))
+		}
+	}
+	model := one(m.thread.Model)
+	if model == "" {
+		model = "unknown"
+	}
+	modelWidth := max(1, width-6-3-ansi.StringWidth(context))
+	modelLine := "Model " + strings.TrimRight(fit(model, modelWidth), " ") + " · " + context
+	directory := one(m.thread.Cwd)
+	if directory == "" {
+		directory = "unknown"
+	}
+	// Preserve the project name at the end of a long path.
+	if ansi.StringWidth(directory) > width-4 {
+		directory = ansi.TruncateLeft(directory, ansi.StringWidth(directory)-(width-4)+1, "…")
+	}
+	git := "Git unavailable"
+	if g, ok := m.git[m.thread.Cwd]; ok {
+		if g.Error != "" {
+			git = "Git · " + g.Error
+		} else {
+			branch := one(g.Branch)
+			if branch == "" {
+				branch = "—"
+			}
+			state := g.Summary()
+			if width < 60 {
+				parts := []string{}
+				for _, entry := range []struct {
+					n     int
+					label string
+				}{{g.Staged, "S"}, {g.Modified, "M"}, {g.Untracked, "?"}, {g.Conflicts, "!"}} {
+					if entry.n > 0 {
+						parts = append(parts, fmt.Sprintf("%s%d", entry.label, entry.n))
+					}
+				}
+				if len(parts) > 0 {
+					state = strings.Join(parts, " ")
+				}
+			}
+			changes := fmt.Sprintf("↑%d ↓%d · %s", g.Ahead, g.Behind, state)
+			branchWidth := max(1, width-4-3-ansi.StringWidth(changes))
+			git = "Git " + strings.TrimRight(fit(branch, branchWidth), " ") + " · " + changes
+		}
+	}
+	lines := []string{quota, modelLine, "Dir " + directory, git}
+	for i := range lines {
+		lines[i] = muted.Render(fit(lines[i], width))
+	}
+	if h.QuotaError != "" || h.Error != "" {
+		lines[0] = warning.Render(fit(quota, width))
+	}
+	return lines
+}
+
 func (m *Model) detailView() string {
 	labels := []string{"Overview", "Responses", "Plan", "Git", "Skills", "MCP", "Requests"}
 	tabs := []string{}

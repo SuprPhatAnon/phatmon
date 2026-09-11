@@ -361,6 +361,26 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		h.Error = ""
 		h.Threads = codex.TopLevelThreads(msg.Threads)
+		if m.selected != nil && m.selected.Home == msg.Name {
+			for _, thread := range h.Threads {
+				if thread.ID != m.selected.Thread.ID {
+					continue
+				}
+				if thread.Model != "" {
+					m.thread.Model = thread.Model
+				}
+				if thread.ModelProvider != "" {
+					m.thread.ModelProvider = thread.ModelProvider
+				}
+				if thread.ReasoningEffort != "" {
+					m.thread.ReasoningEffort = thread.ReasoningEffort
+				}
+				if thread.Cwd != "" {
+					m.thread.Cwd = thread.Cwd
+				}
+				break
+			}
+		}
 		h.Truncated = msg.Truncated
 		h.Refreshed = time.Now()
 		for id, u := range msg.Usage {
