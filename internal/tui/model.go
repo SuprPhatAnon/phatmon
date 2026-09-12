@@ -111,6 +111,8 @@ type Model struct {
 	selected         *row
 	tab              int
 	viewport         viewport.Model
+	helpViewport     viewport.Model
+	showHelp         bool
 	thread           codex.Thread
 	older            bool
 	skills           []codex.Skill
@@ -141,6 +143,8 @@ func New(homes []config.Home, registry string, settings config.Settings, demo bo
 		m.addHome(h)
 	}
 	m.viewport = viewport.New(116, 24)
+	m.helpViewport = viewport.New(118, 32)
+	m.resizeHelp()
 	m.resetResponses()
 	m.composer = textarea.New()
 	m.composer.Placeholder = "Message this session. Ctrl+S sends; Esc keeps the draft."
@@ -321,6 +325,7 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.resizeHelp()
 		m.viewport.Width = max(20, msg.Width-4)
 		m.viewport.Height = max(3, msg.Height-15)
 		m.composer.SetWidth(max(20, msg.Width-8))
@@ -535,6 +540,16 @@ func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
+		}
+		if m.showHelp {
+			m.helpKey(msg)
+			return m, nil
+		}
+		if msg.String() == "?" && m.form == nil && !m.composing {
+			m.showHelp = true
+			m.resizeHelp()
+			m.helpViewport.GotoTop()
+			return m, nil
 		}
 		if m.busy {
 			m.notice = "Operation pending; waiting for Codex response"

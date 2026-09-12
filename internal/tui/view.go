@@ -113,6 +113,11 @@ func (m *Model) View() string {
 			help = "↑↓ select request  enter respond/approve  d decline  tab next view  esc dashboard"
 		}
 	}
+	if m.selected != nil {
+		help = "m new message  ? all hotkeys  " + help
+	} else {
+		help = "? all hotkeys  " + help
+	}
 	if m.form != nil {
 		content = m.formView()
 		help = "tab next field  enter continue/save  esc cancel"
@@ -121,8 +126,12 @@ func (m *Model) View() string {
 		}
 	}
 	if m.composing {
-		content = m.detailHeader() + "\n\n" + m.composer.View()
+		content = m.detailHeader() + "\n\n" + accent.Bold(true).Render("NEW MESSAGE · Ctrl+S send · Esc keep draft") + "\n" + m.composer.View()
 		help = "ctrl+s send to selected session   esc keep draft"
+	}
+	if m.showHelp {
+		content = accent.Bold(true).Render(" ALL HOTKEYS") + "\n\n" + m.helpViewport.View()
+		help = "? / Esc close  ↑↓ scroll  PgUp/PgDn page  Home/End top/bottom"
 	}
 	available := max(1, m.height-6)
 	lines := strings.Split(content, "\n")
@@ -140,7 +149,11 @@ func (m *Model) View() string {
 	if notice == "" {
 		notice = "No account prompts are sent until you send a message. Quotas are per account; homes may share allowance."
 	}
-	return title + "\n" + body + "\n" + warning.Render(fit(notice, m.width)) + "\n" + muted.Render(fit(help, m.width))
+	footer := muted.Render(fit(help, m.width))
+	if m.selected != nil && m.form == nil && !m.showHelp {
+		footer = accent.Bold(true).Render(fit(help, m.width))
+	}
+	return title + "\n" + body + "\n" + warning.Render(fit(notice, m.width)) + "\n" + footer
 }
 func (m *Model) dashboard() string {
 	working, waiting, live, total := 0, 0, 0, 0

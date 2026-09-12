@@ -23,10 +23,18 @@ filter can reveal sessions without changing their runtime state.
 
 ## Keys
 
+Press `?` from the dashboard or any detail view for the complete, scrollable hotkey
+reference. Scroll with Up/Down or PageUp/PageDown; close it with `?` or Esc to return
+to your previous position. Inside a form or message, `?` remains normal text.
+
+The drill-down footer highlights **m — new message** and **? — all hotkeys**.
+In the composer, **Ctrl+S** sends and **Esc** keeps your draft.
+
 These keys apply outside text-entry forms and the message composer.
 
 | Location | Keys | Action |
 | --- | --- | --- |
+| Dashboard/details | `?` | Open the hotkey reference |
 | Dashboard | Up/Down or `j`/`k` | Select a row |
 | Dashboard | Enter | Open session details |
 | Dashboard | `/`, `l` | Search; toggle live-only filter |
